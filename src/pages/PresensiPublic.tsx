@@ -130,13 +130,8 @@ const PresensiPublic = () => {
 
         if (targetKelasId) {
             query = query.eq('kelas_id', targetKelasId);
-        } else {
-            // For general presence, we might want to check if ANY presence exists for this session regardless of class?
-            // Or specifically check for null class_id. 
-            // "jika ada rfid yang terdeteksi cek apakah ada warga dengan rfid tersebut, jika ada langsung buat presensi, untuk tanggal sekarang, dan sesi sekarang"
-            // Assuming strict duplicates check.
-            query = query.is('kelas_id', null);
         }
+        // Jika umum, cek global di sesi ini (tidak peduli kelas)
 
         const { data: existing } = await query.maybeSingle();
 
@@ -147,13 +142,18 @@ const PresensiPublic = () => {
         }
 
         // Insert
-        const { error } = await supabase.from('presensi').insert({
+        const insertPayload: any = {
             warga_id: warga.id,
-            kelas_id: targetKelasId,
             tanggal: today,
             sesi: manualSesi,
             status: 'hadir'
-        });
+        };
+
+        if (targetKelasId) {
+            insertPayload.kelas_id = targetKelasId;
+        }
+
+        const { error } = await supabase.from('presensi').insert(insertPayload);
 
         if (error) throw error;
 
