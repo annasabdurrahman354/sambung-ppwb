@@ -1,12 +1,16 @@
-import React from 'react';
+import { HTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
-const Card = ({ children, className = '', noPadding = false, ...props }) => {
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+    noPadding?: boolean;
+}
+
+const Card = ({ children, className = '', noPadding = false, ...props }: CardProps) => {
     return (
         <div
             className={cn(
                 "bg-white/60 backdrop-blur-xl rounded-[24px] shadow-xl shadow-emerald-900/5 border border-white/40",
-                noPadding ? "" : "p-6",
+                noPadding ? "overflow-hidden" : "p-6",
                 className
             )}
             {...props}

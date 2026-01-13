@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Box, Settings, Loader, Search } from 'lucide-react';
+import { useState } from 'react';
+import { Box, Settings, Search } from 'lucide-react';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
 import Button from './ui/Button';

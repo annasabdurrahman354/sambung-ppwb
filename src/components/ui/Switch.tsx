@@ -1,7 +1,12 @@
-import React from 'react';
+import { ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/utils';
 
-const Switch = ({ checked, onChange, className, ...props }) => {
+export interface SwitchProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onChange'> {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+}
+
+const Switch = ({ checked, onChange, className, ...props }: SwitchProps) => {
     return (
         <button
             type="button"

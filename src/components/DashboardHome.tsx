@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+
 import {
     CreditCard,
     Users,
@@ -130,7 +130,7 @@ const DashboardHome = () => {
                                     dataKey="value"
                                     stroke="none"
                                 >
-                                    {DEMOGRAPHICS_DATA.map((entry, index) => (
+                                    {DEMOGRAPHICS_DATA.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                                     ))}
                                 </Pie>

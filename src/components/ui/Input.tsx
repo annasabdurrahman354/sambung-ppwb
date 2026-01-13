@@ -1,7 +1,12 @@
-import React from 'react';
+import { InputHTMLAttributes, forwardRef } from 'react';
+import { type LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const Input = React.forwardRef(({ className, icon: Icon, type, ...props }, ref) => {
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+    icon?: LucideIcon;
+}
+
+const Input = forwardRef<HTMLInputElement, InputProps>(({ className, icon: Icon, type, ...props }, ref) => {
     return (
         <div className="relative w-full">
             {Icon && (

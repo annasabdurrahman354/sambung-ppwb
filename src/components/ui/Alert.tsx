@@ -1,8 +1,14 @@
-import React from 'react';
+import { ReactNode, HTMLAttributes } from 'react';
 import { AlertTriangle, CheckCircle, XCircle, Info } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const Alert = ({ variant = 'info', title, children, className, ...props }) => {
+export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
+    variant?: 'success' | 'warning' | 'error' | 'info';
+    title?: string;
+    children: ReactNode;
+}
+
+const Alert = ({ variant = 'info', title, children, className, ...props }: AlertProps) => {
     const variants = {
         success: {
             container: "bg-emerald-50/60 border-emerald-100/50 text-[#134E35]",

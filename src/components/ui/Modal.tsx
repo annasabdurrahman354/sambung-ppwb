@@ -1,9 +1,18 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { createPortal } from 'react-dom';
 
-const Modal = ({ isOpen, onClose, children, className, title, maxW = 'max-w-md' }) => {
+export interface ModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    children: ReactNode;
+    className?: string;
+    title?: string;
+    maxW?: string;
+}
+
+const Modal = ({ isOpen, onClose, children, className, maxW = 'max-w-md' }: ModalProps) => {
     if (!isOpen) return null;
 
     return createPortal(
@@ -25,6 +34,8 @@ const Modal = ({ isOpen, onClose, children, className, title, maxW = 'max-w-md' 
                 >
                     <X size={20} />
                 </button>
+                {/* Title support if needed in future within modal content but current implementation relies on children */}
+                {/* {title && <div className="text-xl font-bold mb-4">{title}</div>} */}
                 {children}
             </div>
         </div>,

@@ -1,8 +1,14 @@
-import React from 'react';
+import { InputHTMLAttributes } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
-const Checkbox = ({ checked, onChange, className, label, ...props }) => {
+export interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+    checked: boolean;
+    onChange: (checked: boolean) => void;
+    label?: string;
+}
+
+const Checkbox = ({ checked, onChange, className, label, ...props }: CheckboxProps) => {
     return (
         <label className={cn("flex items-center gap-2 cursor-pointer", className)}>
             <div
