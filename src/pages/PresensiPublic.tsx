@@ -41,7 +41,7 @@ const PresensiPublic = () => {
 
     // Config State
     const [mode, setMode] = useState<Mode>('auto');
-    const [manualType, setManualType] = useState<ManualType>('specific');
+    const [manualType, setManualType] = useState<ManualType>('general');
     const [manualClassId, setManualClassId] = useState<string>('umum');
     const [manualSesi, setManualSesi] = useState<Sesi | ''>('');
     const [configLocked, setConfigLocked] = useState(false);
@@ -118,7 +118,7 @@ const PresensiPublic = () => {
         }
 
         const today = new Date().toISOString().split('T')[0];
-        const targetKelasId = manualType === 'specific' ? manualClassId : null;
+        const targetKelasId = (manualType === 'specific' && manualClassId !== 'umum') ? manualClassId : null;
 
         // Check duplicate
         let query = supabase

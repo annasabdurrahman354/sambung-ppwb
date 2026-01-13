@@ -118,7 +118,7 @@ const Warga = () => {
             aktif: warga.aktif,
             jenis_kelamin: warga.jenis_kelamin,
             kelompok: warga.kelompok || '',
-            kelasIds: wargaWithKelas.kelas_warga?.map(kw => kw.kelas?.id || '').filter(Boolean) || []
+            kelasIds: wargaWithKelas.kelas_warga?.map(kw => kw.kelas?.id ? String(kw.kelas.id) : '').filter(Boolean) || []
         });
         setStatusSelect(warga.aktif ? 'aktif' : 'nonaktif');
         setShowModal(true);
@@ -250,11 +250,19 @@ const Warga = () => {
                         </div>
                     </div>
                     <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Kelompok</label>
+                        <Input
+                            value={formData.kelompok || ''}
+                            onChange={e => setFormData({ ...formData, kelompok: e.target.value })}
+                            placeholder="Masukkan Kelompok"
+                        />
+                    </div>
+                    <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
                         <MultiSelect
-                            options={kelasList.map(k => ({ label: k.nama, value: k.id }))}
+                            options={kelasList.map(k => ({ label: k.nama, value: String(k.id) }))}
                             selected={formData.kelasIds || []}
-                            onChange={(selected) => setFormData({ ...formData, kelasIds: selected })}
+                            onChange={(selected) => setFormData(prev => ({ ...prev, kelasIds: selected }))}
                             placeholder="Pilih Kelas..."
                         />
                     </div>
@@ -285,8 +293,8 @@ const Warga = () => {
                         </Button>
                     </div>
                 </div>
-            </Modal>
-        </div>
+            </Modal >
+        </div >
     );
 };
 

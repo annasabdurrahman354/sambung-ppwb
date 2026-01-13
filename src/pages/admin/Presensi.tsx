@@ -12,7 +12,6 @@ import type { Presensi, Warga, Jadwal, Kelas } from '../../types';
 // Extended type for the joined data we fetch
 interface PresensiWithRelations extends Presensi {
     warga?: Pick<Warga, 'nama' | 'rfid'>;
-    jadwal?: Pick<Jadwal, 'sesi'>;
     kelas?: Pick<Kelas, 'nama'>; // Relationship from presensi.kelas_id
 }
 
@@ -57,7 +56,6 @@ const Presensi = () => {
             .select(`
                 *,
                 warga (nama, rfid),
-                jadwal (sesi),
                 kelas (nama)
             `)
             .gte('created_at', `${filterDate}T00:00:00`)
@@ -100,9 +98,7 @@ const Presensi = () => {
             header: 'Sesi',
             accessor: 'sesi',
             className: 'text-gray-500',
-            render: (row) => row.sesi ?
-                <span className="capitalize">{row.sesi.replace('_', ' ')}</span> :
-                (row.jadwal?.sesi?.replace('_', ' '))
+            render: (row) => <span className="capitalize">{row.sesi ? row.sesi.replace('_', ' ') : '-'}</span>
         },
         {
             header: 'Kelas',
