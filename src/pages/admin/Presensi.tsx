@@ -34,13 +34,21 @@ const Presensi = () => {
     const [filterSesi, setFilterSesi] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
 
+    const [page, setPage] = useState(1);
+    const [pageSize] = useState(25);
+    const [totalItems, setTotalItems] = useState(0);
+
     useEffect(() => {
         fetchKelas();
     }, []);
 
     useEffect(() => {
+        setPage(1);
+    }, [filterDate, filterKelas, filterSesi, searchTerm]);
+
+    useEffect(() => {
         fetchPresensi();
-    }, [filterDate, filterKelas, filterSesi]);
+    }, [page, filterDate, filterKelas, filterSesi, searchTerm]);
 
     const fetchKelas = async () => {
         const { data, error } = await supabase.from('kelas').select('*').order('nama');
@@ -51,13 +59,14 @@ const Presensi = () => {
     const fetchPresensi = async () => {
         setLoading(true);
         // Build base query
+        // Use !inner on warga to allow filtering by warga name
         let query = supabase
             .from('presensi')
             .select(`
                 *,
-                warga (nama, rfid),
+                warga!inner (nama, rfid),
                 kelas (nama)
-            `)
+            `, { count: 'exact' })
             .gte('created_at', `${filterDate}T00:00:00`)
             .lte('created_at', `${filterDate}T23:59:59`);
 
@@ -73,11 +82,26 @@ const Presensi = () => {
             query = query.eq('sesi', filterSesi);
         }
 
+        // Apply Search (Warga Name)
+        if (searchTerm) {
+            // Filter on join table
+            query = query.ilike('warga.nama', `%${searchTerm}%`);
+        }
+
+        // Pagination
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+
         // Execute query details
-        const { data, error } = await query.order('created_at', { ascending: false });
+        const { data, error, count } = await query
+            .order('created_at', { ascending: false })
+            .range(from, to);
 
         if (error) console.error(error);
-        else setPresensiList(data || []);
+        else {
+            setPresensiList(data || []);
+            setTotalItems(count || 0);
+        }
 
         setLoading(false);
     };
@@ -119,10 +143,6 @@ const Presensi = () => {
         }
     ];
 
-    const filteredData = presensiList.filter(p =>
-        p.warga?.nama.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -162,10 +182,22 @@ const Presensi = () => {
                 <div className="p-4 border-b border-gray-100 flex items-center justify-between gap-4">
                     <Input icon={Search} placeholder="Cari nama..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-md" />
                     <div className="text-sm text-gray-500">
-                        Total Hadir: <span className="font-bold text-gray-900">{filteredData.length}</span>
+                        Total Hadir: <span className="font-bold text-gray-900">{totalItems}</span>
                     </div>
                 </div>
-                <Table columns={columns} data={filteredData} isLoading={loading} className="border-0 shadow-none rounded-none" />
+                <Table
+                    columns={columns}
+                    data={presensiList}
+                    isLoading={loading}
+                    className="border-0 shadow-none rounded-none"
+                    pagination={{
+                        currentPage: page,
+                        totalPages: Math.ceil(totalItems / pageSize),
+                        onPageChange: setPage,
+                        totalItems: totalItems,
+                        pageSize: pageSize
+                    }}
+                />
             </Card>
         </div>
     );

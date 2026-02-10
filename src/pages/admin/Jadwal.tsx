@@ -41,39 +41,63 @@ const Jadwal = () => {
         kelas_id: '' // Start empty
     });
 
+    const [page, setPage] = useState(1);
+    const [pageSize] = useState(25);
+    const [totalItems, setTotalItems] = useState(0);
+
     useEffect(() => {
         fetchData();
     }, []);
 
+    useEffect(() => {
+        setPage(1);
+    }, [filterKelas, filterHari, filterSesi]);
+
+    useEffect(() => {
+        fetchJadwal();
+    }, [page, filterKelas, filterHari, filterSesi]);
+
     const fetchData = async () => {
         setLoading(true);
-
-        // Fetch Jadwal with Kelas
-        const { data: jadwalData, error: jadwalError } = await supabase
-            .from('jadwal')
-            .select('*, kelas (nama)');
-
-        if (jadwalData) {
-            const sortedData = (jadwalData || []).sort((a: JadwalWithKelas, b: JadwalWithKelas) => {
-                const kelasA = a.kelas?.nama || 'zzzz';
-                const kelasB = b.kelas?.nama || 'zzzz';
-                if (kelasA !== kelasB) return kelasA.localeCompare(kelasB);
-
-                const hariA = HARI_ORDER[a.hari] || 99;
-                const hariB = HARI_ORDER[b.hari] || 99;
-                if (hariA !== hariB) return hariA - hariB;
-
-                const sesiA = SESI_ORDER[a.sesi] || 99;
-                const sesiB = SESI_ORDER[b.sesi] || 99;
-                return sesiA - sesiB;
-            });
-            setJadwalList(sortedData);
-        }
-
         // Fetch Kelas options
         const { data: kelasData } = await supabase.from('kelas').select('*').eq('aktif', true).order('nama');
         setKelasList(kelasData || []);
 
+        await fetchJadwal();
+        setLoading(false);
+    };
+
+    const fetchJadwal = async () => {
+        setLoading(true);
+        let query = supabase
+            .from('jadwal')
+            .select('*, kelas (nama)', { count: 'exact' });
+
+        if (filterKelas !== 'all') {
+            if (filterKelas === 'null') query = query.is('kelas_id', null);
+            else query = query.eq('kelas_id', filterKelas);
+        }
+
+        if (filterHari !== 'all') {
+            query = query.eq('hari', filterHari);
+        }
+
+        if (filterSesi !== 'all') {
+            query = query.eq('sesi', filterSesi);
+        }
+
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data, error, count } = await query
+            .order('created_at', { ascending: false })
+            .range(from, to);
+
+        if (error) console.error(error);
+        else {
+            setJadwalList(data || []);
+            setTotalItems(count || 0);
+        }
         setLoading(false);
     };
 
@@ -140,14 +164,6 @@ const Jadwal = () => {
         </div>
     );
 
-    const filteredData = jadwalList.filter(item => {
-        const matchesKelas = filterKelas === 'all' ? true : (filterKelas === 'null' ? !item.kelas_id : item.kelas_id === filterKelas);
-        const matchesHari = filterHari === 'all' ? true : item.hari === filterHari;
-        const matchesSesi = filterSesi === 'all' ? true : item.sesi === filterSesi;
-
-        return matchesKelas && matchesHari && matchesSesi;
-    });
-
     return (
         <div className="space-y-6 animate-in fade-in duration-500">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -195,7 +211,20 @@ const Jadwal = () => {
             </div>
 
             <Card noPadding>
-                <Table columns={columns} data={filteredData} actions={actions} isLoading={loading} className="border-0 shadow-none rounded-none" />
+                <Table
+                    columns={columns}
+                    data={jadwalList}
+                    actions={actions}
+                    isLoading={loading}
+                    className="border-0 shadow-none rounded-none"
+                    pagination={{
+                        currentPage: page,
+                        totalPages: Math.ceil(totalItems / pageSize),
+                        onPageChange: setPage,
+                        totalItems: totalItems,
+                        pageSize: pageSize
+                    }}
+                />
             </Card>
 
             <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={formData.id ? "Edit Jadwal" : "Tambah Jadwal"}>
@@ -261,7 +290,7 @@ const Jadwal = () => {
                     </div>
                 </div>
             </Modal>
-        </div>
+        </div >
     );
 };
 

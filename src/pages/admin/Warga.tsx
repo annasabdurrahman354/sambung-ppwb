@@ -32,17 +32,29 @@ const Warga = () => {
     });
 
     const [statusSelect, setStatusSelect] = useState<'aktif' | 'nonaktif'>('aktif');
-    const [selectedKelas, setSelectedKelas] = useState<string>('all');
+    const [selectedKelas, setSelectedKelas] = useState<string[]>([]);
+
+    const [page, setPage] = useState(1);
+    const [pageSize] = useState(25);
+    const [totalItems, setTotalItems] = useState(0);
 
     useEffect(() => {
-        fetchData();
+        fetchWarga();
+    }, [page, searchTerm, selectedKelas]); // Re-fetch when params change
+
+    useEffect(() => {
+        setPage(1); // Reset to page 1 on filter change
+    }, [searchTerm, selectedKelas]);
+
+    useEffect(() => {
+        fetchKelas();
     }, []);
 
     const fetchData = async () => {
-        setLoading(true);
-        await Promise.all([fetchWarga(), fetchKelas()]);
-        setLoading(false);
+        await fetchWarga();
+        await fetchKelas();
     };
+
 
     const fetchKelas = async () => {
         const { data } = await supabase.from('kelas').select('*').eq('aktif', true).order('nama');
@@ -50,15 +62,43 @@ const Warga = () => {
     };
 
     const fetchWarga = async () => {
-        // setLoading(true); // Handled in fetchData
-        const { data, error } = await supabase
+        setLoading(true);
+        // Base query
+        let query = supabase
             .from('warga')
-            .select('*, kelas_warga(kelas(id, nama))')
-            .order('nama', { ascending: true });
+            .select('*, kelas_warga(kelas(id, nama))', { count: 'exact' });
+
+        // Search
+        if (searchTerm) {
+            query = query.or(`nama.ilike.%${searchTerm}%,rfid.ilike.%${searchTerm}%`);
+        }
+
+        // Class Filter
+        if (selectedKelas.length > 0) {
+            // Use !inner to filter Warga that HAVE these classes
+            // Note: This might filter the returned nested kelas_warga array too to only match conditions
+            query = supabase.from('warga').select('*, kelas_warga!inner(kelas(id, nama))', { count: 'exact' })
+                .in('kelas_warga.kelas_id', selectedKelas);
+
+            if (searchTerm) {
+                query = query.or(`nama.ilike.%${searchTerm}%,rfid.ilike.%${searchTerm}%`);
+            }
+        }
+
+        // Ordering & Pagination
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data, error, count } = await query
+            .order('nama', { ascending: true })
+            .range(from, to);
 
         if (error) console.error(error);
-        else setWargaList(data || []);
-        // setLoading(false);
+        else {
+            setWargaList(data || []);
+            setTotalItems(count || 0);
+        }
+        setLoading(false);
     };
 
     const handleSubmit = async () => {
@@ -87,7 +127,7 @@ const Warga = () => {
         if (wargaId) {
             // 1. Delete existing
             await supabase.from('kelas_warga').delete().eq('warga_id', wargaId);
-
+            // 2. Insert new
             // 2. Insert new
             if (formData.kelasIds && formData.kelasIds.length > 0) {
                 const kelasPayload = formData.kelasIds.map(kId => ({
@@ -130,16 +170,6 @@ const Warga = () => {
         setShowModal(true);
     };
 
-    const filteredData = wargaList.filter(w => {
-        const matchesSearch = w.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            w.rfid.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesKelas = selectedKelas === 'all' ||
-            w.kelas_warga?.some(kw => kw.kelas?.id === selectedKelas);
-
-        return matchesSearch && matchesKelas;
-    });
-
     const columns: Column<WargaWithKelas>[] = [
         { header: 'Nama', accessor: 'nama', className: 'font-medium text-gray-900' },
         { header: 'L/P', accessor: 'jenis_kelamin', className: 'text-gray-500' },
@@ -158,7 +188,7 @@ const Warga = () => {
                 </div>
             )
         },
-        // { header: 'Kelompok', accessor: 'kelompok', className: 'text-gray-500' }, // Deprecated visually, but keeping data
+        { header: 'Kelompok', accessor: 'kelompok', className: 'text-gray-500' },
         { header: 'RFID', accessor: 'rfid', className: 'text-gray-500' },
         {
             header: 'Status',
@@ -202,24 +232,28 @@ const Warga = () => {
                         />
                     </div>
                     <div className="flex items-center gap-2">
-                        <Select
-                            value={selectedKelas}
-                            onChange={(e) => setSelectedKelas(e.target.value)}
-                            className="min-w-[200px]"
-                        >
-                            <option value="all">Semua Kelas</option>
-                            {kelasList.map(k => (
-                                <option key={k.id} value={k.id}>{k.nama}</option>
-                            ))}
-                        </Select>
+                        <MultiSelect
+                            options={kelasList.map(k => ({ label: k.nama, value: String(k.id) }))}
+                            selected={selectedKelas}
+                            onChange={setSelectedKelas}
+                            placeholder="Filter Kelas..."
+                            className="min-w-[250px]"
+                        />
                     </div>
                 </div>
                 <Table
                     columns={columns}
-                    data={filteredData}
+                    data={wargaList}
                     actions={actions}
                     isLoading={loading}
                     className="border-0 shadow-none rounded-none"
+                    pagination={{
+                        currentPage: page,
+                        totalPages: Math.ceil(totalItems / pageSize),
+                        onPageChange: setPage,
+                        totalItems: totalItems,
+                        pageSize: pageSize
+                    }}
                 />
             </Card>
 

@@ -16,15 +16,40 @@ const Kelas = () => {
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState<Partial<KelasType>>({ id: undefined, nama: '', aktif: true });
 
+    const [page, setPage] = useState(1);
+    const [pageSize] = useState(25);
+    const [totalItems, setTotalItems] = useState(0);
+
+    useEffect(() => {
+        setPage(1);
+    }, [searchTerm]);
+
     useEffect(() => {
         fetchKelas();
-    }, []);
+    }, [page, searchTerm]);
 
     const fetchKelas = async () => {
         setLoading(true);
-        const { data, error } = await supabase.from('kelas').select('*').order('nama', { ascending: true });
+        let query = supabase
+            .from('kelas')
+            .select('*', { count: 'exact' });
+
+        if (searchTerm) {
+            query = query.ilike('nama', `%${searchTerm}%`);
+        }
+
+        const from = (page - 1) * pageSize;
+        const to = from + pageSize - 1;
+
+        const { data, error, count } = await query
+            .order('nama', { ascending: true })
+            .range(from, to);
+
         if (error) console.error(error);
-        else setKelasList(data || []);
+        else {
+            setKelasList(data || []);
+            setTotalItems(count || 0);
+        }
         setLoading(false);
     };
 
@@ -53,8 +78,6 @@ const Kelas = () => {
         setShowModal(true);
     };
 
-    const filteredData = kelasList.filter(k => k.nama.toLowerCase().includes(searchTerm.toLowerCase()));
-
     const columns: Column<KelasType>[] = [
         { header: 'Nama Kelas', accessor: 'nama', className: 'font-medium text-gray-900' },
         { header: 'Status', accessor: 'aktif', render: (row) => <Badge status={row.aktif ? 'Active' : 'Inactive'} variant={row.aktif ? 'success' : 'neutral'} /> },
@@ -81,7 +104,20 @@ const Kelas = () => {
                 <div className="p-4 border-b border-gray-100">
                     <Input icon={Search} placeholder="Cari kelas..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-md" />
                 </div>
-                <Table columns={columns} data={filteredData} actions={actions} isLoading={loading} className="border-0 shadow-none rounded-none" />
+                <Table
+                    columns={columns}
+                    data={kelasList}
+                    actions={actions}
+                    isLoading={loading}
+                    className="border-0 shadow-none rounded-none"
+                    pagination={{
+                        currentPage: page,
+                        totalPages: Math.ceil(totalItems / pageSize),
+                        onPageChange: setPage,
+                        totalItems: totalItems,
+                        pageSize: pageSize
+                    }}
+                />
             </Card>
 
             <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={formData.id ? "Edit Kelas" : "Tambah Kelas"}>

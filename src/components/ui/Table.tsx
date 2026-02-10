@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
-// import { ChevronLeft, ChevronRight } from 'lucide-react'; // Unused
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Button from './Button';
 
 export interface Column<T> {
     header: string;
@@ -9,15 +10,24 @@ export interface Column<T> {
     render?: (row: T) => ReactNode; // Explicit render function
 }
 
+export interface PaginationProps {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+    totalItems?: number;
+    pageSize?: number;
+}
+
 export interface TableProps<T> {
     columns: Column<T>[];
     data: T[];
     actions?: (row: T) => ReactNode;
     isLoading?: boolean;
     className?: string;
+    pagination?: PaginationProps;
 }
 
-const Table = <T extends { id?: string | number } | any>({ columns, data, actions, isLoading, className }: TableProps<T>) => {
+const Table = <T extends { id?: string | number } | any>({ columns, data, actions, isLoading, className, pagination }: TableProps<T>) => {
     return (
         <div className={cn("overflow-hidden rounded-xl border border-gray-100/50 bg-white/40 backdrop-blur-md shadow-sm", className)}>
             <div className="overflow-x-auto">
@@ -67,6 +77,39 @@ const Table = <T extends { id?: string | number } | any>({ columns, data, action
                     </tbody>
                 </table>
             </div>
+
+            {pagination && !isLoading && (
+                <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100/50 bg-white/30">
+                    <div className="text-xs text-gray-500">
+                        {pagination.totalItems !== undefined && (
+                            <>Showing {(pagination.currentPage - 1) * (pagination.pageSize || 25) + 1} to {Math.min(pagination.currentPage * (pagination.pageSize || 25), pagination.totalItems)} of {pagination.totalItems} entries</>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pagination.currentPage === 1}
+                            onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
+                            className="h-8 w-8 p-0"
+                        >
+                            <ChevronLeft size={16} />
+                        </Button>
+                        <span className="text-sm font-medium text-gray-700">
+                            Page {pagination.currentPage} of {pagination.totalPages}
+                        </span>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={pagination.currentPage === pagination.totalPages}
+                            onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
+                            className="h-8 w-8 p-0"
+                        >
+                            <ChevronRight size={16} />
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
